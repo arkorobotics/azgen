@@ -1,0 +1,2 @@
+# azgen
+Activation Zone Generator
