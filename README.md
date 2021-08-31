@@ -27,3 +27,6 @@ summit_long = -118.8328   # Longitude in degrees (Source: SOTA Database)
 summit_alt = 764          # Altitude in meters (Source: SOTA Database)
 ```
 3. Import the output `.shp` file in `/data` into Google Maps or your GIS program of choice
+
+# Credits
+Special thanks to @thedeltaflyer for setting up the API!
