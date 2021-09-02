@@ -13,4 +13,4 @@ class AZRequest(BaseModel):
 
 
 class AZResponse(BaseModel):
-    points: Optional[List[Sequence[float]]] = None
+    az: Optional[str] = None

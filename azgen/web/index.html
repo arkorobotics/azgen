@@ -1,0 +1,260 @@
+<!--- 
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Vue.js firebase + validation example</title>
+    <meta charset="utf-8">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="dist/vue.min.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      {{info}}
+    </div>
+    <script src="app.js"></script>
+  </body>
+</html>
+
+<!DOCTYPE html>
+<html>
+-->
+
+<head>
+  <title>SOTA Activation Zone Estimator - N6ARA</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+  <meta charset="utf-8">
+  <link rel="stylesheet" type="text/css" href="style.css">
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="dist/vue.min.js"></script>
+
+  <link rel="stylesheet" href="https://openlayers.org/en/v4.6.5/css/ol.css" type="text/css">
+  <!-- The line below is only needed for old environments like Internet Explorer and Android 4.x -->
+  <script src="https://cdn.polyfill.io/v2/polyfill.min.js?features=requestAnimationFrame,Element.prototype.classList,URL"></script>
+  <script src="https://openlayers.org/en/v4.6.5/build/ol.js"></script>
+  <script>
+    var raster;
+    var source;
+    var vector;
+    var map;
+    var typeSelect;
+    var draw;
+    var features = new ol.Collection();
+    var format = new ol.format.WKT();
+    var current_shape = "point";
+
+    var fill = new ol.style.Fill({
+      color: 'rgba(210, 122, 167,0.2)'
+    });
+    var stroke = new ol.style.Stroke({
+      color: '#B40404',
+      width: 2
+    });
+
+    var styles = [
+      new ol.style.Style({
+        image: new ol.style.Circle({
+          fill: fill,
+          stroke: stroke,
+          radius: 5
+        }),
+        fill: fill,
+        stroke: stroke
+      })
+    ];
+
+    function addInteraction(shape) {
+      draw = new ol.interaction.Draw({
+        features: features,
+        type: /** @type {ol.geom.GeometryType} */ shape
+      });
+      map.addInteraction(draw);
+    }
+
+    /**
+    * Let user change the geometry type.
+    * @param {Event} e Change event.
+    */
+    function createVector() {
+      vector = new ol.layer.Vector({
+        source: new ol.source.Vector({ features: features }),
+        style: styles
+      });
+    }
+
+    function toEPSG4326(element, index, array) {
+      element = element.getGeometry().transform('EPSG:3857', 'EPSG:4326');
+    }
+
+    function toEPSG3857(element, index, array) {
+      element = element.getGeometry().transform('EPSG:4326', 'EPSG:3857');
+    }
+
+    function selectGeom(shape) {
+      current_shape = shape;
+      map.removeInteraction(draw);
+      addInteraction(shape);
+    }
+
+    function init() {
+      // document.getElementById("missing_wkt").style.display = "block";
+      createVector();
+      raster = new ol.layer.Tile({
+        source: new ol.source.XYZ({
+          url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+          maxZoom: 19
+        })
+      });
+
+      features.on("add", function (e) {
+        restoreDefaultColors();
+        features.forEach(toEPSG4326);
+        document.getElementById('wktStringTextArea').value = format.writeFeatures(features.getArray(), { rightHanded: true });
+        features.forEach(toEPSG3857);
+      });
+
+      map = new ol.Map({
+        layers: [raster, vector],
+        target: 'map',
+        view: new ol.View({
+          center: [-11000000, 4600000],
+          zoom: 4
+        })
+      });
+      plotWKT();
+      selectGeom('Point');
+    }
+
+    function restoreDefaultColors() {
+      document.getElementById("wktStringTextArea").style.borderColor = "";
+      document.getElementById("wktStringTextArea").style.backgroundColor = "";
+    };
+
+    // Plot wkt string on map
+    function plotWKT() {
+      var new_feature;
+
+      wkt_string = document.getElementById("wktStringTextArea").value;
+      if (wkt_string == "") {
+        document.getElementById("wktStringTextArea").style.borderColor = "red";
+        document.getElementById("wktStringTextArea").style.backgroundColor = "#F7E8F3";
+        return;
+      } else {
+        try {
+          new_feature = format.readFeature(wkt_string);
+        } catch (err) {
+        }
+      }
+
+      if (!new_feature) {
+        document.getElementById("wktStringTextArea").style.borderColor = "red";
+        document.getElementById("wktStringTextArea").style.backgroundColor = "#F7E8F3";
+        return;
+      } else {
+        map.removeLayer(vector);
+        features.clear();
+        new_feature.getGeometry().transform('EPSG:4326', 'EPSG:3857');
+        features.push(new_feature);
+      }
+      vector = new ol.layer.Vector({
+        source: new ol.source.Vector({ features: features }),
+        style: styles
+      });
+
+      selectGeom(current_shape);
+      map.addLayer(vector);
+      derived_feature = features.getArray()[0];
+      extent = derived_feature.getGeometry().getExtent();
+      minx = derived_feature.getGeometry().getExtent()[0];
+      miny = derived_feature.getGeometry().getExtent()[1];
+      maxx = derived_feature.getGeometry().getExtent()[2];
+      maxy = derived_feature.getGeometry().getExtent()[3];
+      centerx = (minx + maxx) / 2;
+      centery = (miny + maxy) / 2;
+      map.setView(new ol.View({
+        center: [centerx, centery],
+        zoom: 8
+      }));
+      map.getView().fit(extent, map.getSize());
+    }
+
+    function clearMap() {
+      map.removeLayer(vector);
+      features.clear();
+      vector = new ol.layer.Vector({
+        source: new ol.source.Vector({ features: features }),
+        style: styles
+      });
+      selectGeom(current_shape);
+      map.addLayer(vector);
+      document.getElementById("wktStringTextArea").value = "";
+      restoreDefaultColors();
+    }
+  </script>
+  <!-- Place this tag in your head or just before your close body tag. -->
+  <script async defer src="https://buttons.github.io/buttons.js"></script>
+  <style>
+	@media only screen and (min-width: 1366px) {
+	  .map { height: 600px !important}
+	}
+	@media only screen and (min-width: 1440px) {
+	  .map { height: 800px !important}
+	}
+	@media only screen and (min-width: 1680px) {
+	  .map { height: 800px !important}
+	}
+	@media only screen and (min-width: 1920px) {
+	  .map { height: 800px !important}
+	}
+	@media only screen and (min-width: 2560px) {
+	  .map { height: 800px !important}
+	}
+  </style>
+</head>
+
+<body onload="init()">
+  <nav class="navbar navbar-expand-sm bg-dark navbar-dark" style="height: 40px;line-height: 0.5">
+    <a class="navbar-brand" href="#">SOTA Activation Zone Estimator</a>
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link">   By: N6ARA</a>
+      </li>
+    </ul>
+  </nav>
+  <div class="container-fluid" style="padding: 0px; border:0px">
+    <div class="span12">
+      <div id="map" class="map" style="z-index: 0"></div>
+    </div>
+    <div class="span12" style="padding: 10px; border:0px">
+      
+    </div>
+    <div id="app">
+      <div class="span12" id="polygontext" style="padding: 10px; border:0px">
+        <form id="form" v-on:submit.prevent="calcAZ">
+          <label for="lat">Latitude (deg):</label>
+          <input type="text" id="lat" name="lat" value="34.0738"><br>
+          <label for="long">Longitude (deg):</label>
+          <input type="text" id="long" name="long" value="-118.8328"><br>
+          <label for="alt">SOTA Altitude (m):</label>
+          <input type="text" id="alt" name="alt" value="764"><br>
+          <input type="submit" class="btn btn-primary" value="Calculate AZ"><br><br>
+          Estimated Computation Time: ~1 min
+          <textarea id="wktStringTextArea" class="form-control" rows="4" onclick="restoreDefaultColors()">
+            {{info}}
+          </textarea>
+
+          <button type="button" class="btn btn-primary" onclick="plotWKT()">Plot Shape</button><br>
+
+        </form>
+      </div>
+    </div>
+    <script src="app.js"></script>
+  </div>
+
+</body>
+
+</html>

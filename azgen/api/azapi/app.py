@@ -1,5 +1,7 @@
 from fastapi import FastAPI, Response, status
 
+from fastapi.middleware.cors import CORSMiddleware
+
 from .models import AZRequest, AZResponse
 from .azgen import get_bounds, get_cutoff_alt, get_az
 from .verison import __version__
@@ -7,6 +9,15 @@ from .verison import __version__
 
 app = FastAPI()
 
+origins = ["*"]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
@@ -17,12 +28,16 @@ def home():
 def azgen(item: AZRequest, response: Response):
     bounds = get_bounds(item)
     cutoff_alt = get_cutoff_alt(item)
-    dem_data = get_az(item, bounds)
+    az_geo = get_az(item, bounds)
 
     print(f'Bounds: {bounds}')
     print(f'Cutoff Alt: {cutoff_alt}')
-    print(f'DEM Data: {dem_data}')
+    print(f'AZ Data: {az_geo}')
 
-    # final points would be put in this dict:
-    az_resp = {}
-    return az_resp
+    # Convert to string and remove altitude (0m)
+    az_geo_string = str(az_geo)
+    az_geo_string = az_geo_string.replace(" 0", "")
+
+    print("Polygon String: ", az_geo_string)
+    
+    return { "az": az_geo_string }

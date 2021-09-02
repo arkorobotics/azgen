@@ -21,3 +21,8 @@ Test using `httpie`:
 (venv)> http POST http://localhost:8000 < sample.json
 // Get a 500 error because the app isn't finished :(
 ```
+
+```
+Term 1:  $ uvicorn azapi:app --reload --port 8080
+Term 2:  $ http-server --proxy http://localhost:8080?
+```
