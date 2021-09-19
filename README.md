@@ -29,4 +29,4 @@ summit_alt = 764          # Altitude in meters (Source: SOTA Database)
 3. Import the output `.shp` file in `/data` into Google Maps or your GIS program of choice
 
 # Credits
-Special thanks to @thedeltaflyer for setting up the API backend!
+Special thanks to @thedeltaflyer for setting up the API backend and @eheinrich for productionizing the frontend!
